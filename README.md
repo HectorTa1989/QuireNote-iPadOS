@@ -1,6 +1,6 @@
-# Quire
+# QuireNote
 
-Quire is an iPad handwriting notebook whose canonical documents are ordinary,
+QuireNote is an iPad handwriting notebook whose canonical documents are ordinary,
 user-owned files. Each `.quire` package contains a human-readable sidecar,
 editable page drawings, optional PDF backgrounds, and a current flattened PDF.
 

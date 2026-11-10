@@ -39,7 +39,8 @@ targets:
     info:
       path: App/Quire/Info.plist
       properties:
-        CFBundleDisplayName: Quire
+        CFBundleDisplayName: QuireNote
+        CFBundleName: QuireNote
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.productivity
@@ -48,12 +49,12 @@ targets:
         UISupportsDocumentBrowser: true
         LSSupportsOpeningDocumentsInPlace: true
         CFBundleDocumentTypes:
-          - CFBundleTypeName: Quire Notebook
+          - CFBundleTypeName: QuireNote Notebook
             LSItemContentTypes:
               - com.quireapp.notebook
         UTExportedTypeDeclarations:
           - UTTypeIdentifier: com.quireapp.notebook
-            UTTypeDescription: Quire Notebook
+            UTTypeDescription: QuireNote Notebook
             UTTypeConformsTo:
               - com.apple.package
             UTTypeTagSpecification:

@@ -37,7 +37,7 @@ struct LibraryView: View {
                     .pickerStyle(.menu)
                 }
             }
-            .navigationTitle("Quire")
+            .navigationTitle("QuireNote")
         } detail: {
             NavigationStack {
                 Group {
@@ -131,7 +131,7 @@ struct LibraryView: View {
         .sheet(isPresented: $isShowingPaywall) {
             PaywallView()
         }
-        .alert("Quire couldn’t complete that action", isPresented: errorIsPresented) {
+        .alert("QuireNote couldn’t complete that action", isPresented: errorIsPresented) {
             Button("OK") { library.errorMessage = nil }
         } message: {
             Text(library.errorMessage ?? "Unknown error")

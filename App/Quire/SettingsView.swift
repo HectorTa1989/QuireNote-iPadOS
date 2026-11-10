@@ -5,12 +5,12 @@ struct SettingsView: View {
 
     var body: some View {
         List {
-            Section("Quire Pro") {
+            Section("QuireNote Pro") {
                 if purchases.isPro {
                     Label("Pro is unlocked", systemImage: "checkmark.seal.fill")
                         .foregroundStyle(.green)
                 } else {
-                    NavigationLink("Unlock Quire Pro") { PaywallView() }
+                    NavigationLink("Unlock QuireNote Pro") { PaywallView() }
                 }
                 Button("Restore Purchase") {
                     Task { await purchases.restorePurchases() }

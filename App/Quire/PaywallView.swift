@@ -14,7 +14,7 @@ struct PaywallView: View {
                     Text("Pay once. Keep your files.")
                         .font(.largeTitle.bold())
                         .multilineTextAlignment(.center)
-                    Text("The free tier includes three notebooks. Quire Pro unlocks unlimited notebooks with one purchase—no subscription.")
+                    Text("The free tier includes three notebooks. QuireNote Pro unlocks unlimited notebooks with one purchase—no subscription.")
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
@@ -40,7 +40,7 @@ struct PaywallView: View {
                     .foregroundStyle(.secondary)
             }
             .padding(32)
-            .navigationTitle("Quire Pro")
+            .navigationTitle("QuireNote Pro")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

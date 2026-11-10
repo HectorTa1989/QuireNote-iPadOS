@@ -11,7 +11,7 @@ enum NotebookRepositoryError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .folderAccessDenied:
-            "Quire no longer has access to that folder. Choose it again."
+            "QuireNote no longer has access to that folder. Choose it again."
         case .invalidPDF:
             "The selected PDF has no readable pages."
         }
