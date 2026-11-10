@@ -167,7 +167,13 @@ private struct NotebookCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             RoundedRectangle(cornerRadius: 18)
-                .fill(.tint.gradient)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.accentColor.opacity(0.72), Color.accentColor],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
                 .aspectRatio(0.75, contentMode: .fit)
                 .overlay(alignment: .bottomLeading) {
                     Image(systemName: "scribble.variable")

@@ -35,7 +35,7 @@ final class NotebookSession: ObservableObject {
 
     var currentPaper: Paper? {
         guard let notebook, notebook.pages.indices.contains(currentPageIndex) else { return nil }
-        switch notebook.pages[currentPageIndex].background {
+        return switch notebook.pages[currentPageIndex].background {
         case let .template(paper): paper
         case .pdf: notebook.paper
         }

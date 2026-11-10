@@ -1,5 +1,6 @@
 import XCTest
 
+@MainActor
 final class QuireUITests: XCTestCase {
     func testOnboardingExplainsFileOwnership() {
         let app = XCUIApplication()
