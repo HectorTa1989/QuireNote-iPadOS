@@ -1,0 +1,88 @@
+name: Quire
+
+options:
+  bundleIdPrefix: com.quireapp
+  deploymentTarget:
+    iOS: "17.0"
+  developmentLanguage: en
+  xcodeVersion: "27.0"
+
+packages:
+  QuireCore:
+    path: .
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    TARGETED_DEVICE_FAMILY: "2"
+    SUPPORTS_MACCATALYST: NO
+
+targets:
+  QuireRender:
+    type: framework
+    platform: iOS
+    sources:
+      - App/QuireRender
+    dependencies:
+      - package: QuireCore
+        product: QuireCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.quireapp.render
+        GENERATE_INFOPLIST_FILE: YES
+
+  Quire:
+    type: application
+    platform: iOS
+    info:
+      path: App/Quire/Info.plist
+      properties:
+        CFBundleDisplayName: Quire
+        LSApplicationCategoryType: public.app-category.productivity
+        UIApplicationSupportsIndirectInputEvents: true
+        UILaunchScreen: {}
+        UISupportsDocumentBrowser: true
+        LSSupportsOpeningDocumentsInPlace: true
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Quire Notebook
+            LSItemContentTypes:
+              - com.quireapp.notebook
+        UTExportedTypeDeclarations:
+          - UTTypeIdentifier: com.quireapp.notebook
+            UTTypeDescription: Quire Notebook
+            UTTypeConformsTo:
+              - com.apple.package
+            UTTypeTagSpecification:
+              LSTypeIsPackage: true
+    sources:
+      - App/Quire
+    dependencies:
+      - package: QuireCore
+        product: QuireCore
+      - target: QuireRender
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.quireapp.Quire
+        PRODUCT_NAME: Quire
+
+  QuireUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - App/QuireUITests
+    dependencies:
+      - target: Quire
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.quireapp.QuireUITests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  Quire:
+    build:
+      targets:
+        Quire: all
+        QuireRender: all
+    test:
+      targets:
+        - QuireUITests
