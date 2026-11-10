@@ -1,0 +1,24 @@
+name: iPad app
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: xcodegen generate
+      - name: Build for iPad Simulator
+        run: >-
+          xcodebuild
+          -project Quire.xcodeproj
+          -scheme Quire
+          -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO
+          build
