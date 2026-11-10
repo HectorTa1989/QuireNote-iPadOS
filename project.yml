@@ -16,6 +16,8 @@ settings:
     SWIFT_VERSION: "6.0"
     TARGETED_DEVICE_FAMILY: "2"
     SUPPORTS_MACCATALYST: NO
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
 
 targets:
   QuireRender:
@@ -38,6 +40,8 @@ targets:
       path: App/Quire/Info.plist
       properties:
         CFBundleDisplayName: Quire
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.productivity
         UIApplicationSupportsIndirectInputEvents: true
         UILaunchScreen: {}
@@ -64,6 +68,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.quireapp.Quire
         PRODUCT_NAME: Quire
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
   QuireUITests:
     type: bundle.ui-testing

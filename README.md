@@ -44,7 +44,29 @@ xcodebuild -project Quire.xcodeproj -scheme Quire \
 ```
 
 The StoreKit product identifier is `quire.pro`. Configure it as a non-consumable
-with Family Sharing before signed TestFlight builds.
+with Family Sharing before signed TestFlight builds. The full privacy policy is
+published in [PRIVACY.md](PRIVACY.md).
+
+## Signed IPA release builds
+
+The `iPad app` workflow always produces an **unsigned verification IPA** for
+download and inspection. It is not installable on an iPad. A secrets-gated job
+also produces a signed App Store IPA when the repository provides these Actions
+secrets:
+
+- `APPLE_CERTIFICATE_BASE64` — base64-encoded Apple Distribution `.p12`.
+- `APPLE_CERTIFICATE_PASSWORD` — password for that `.p12`.
+- `APPLE_PROVISIONING_PROFILE_BASE64` — base64-encoded App Store provisioning profile.
+- `APPLE_TEAM_ID` — the Apple Developer Team ID.
+- `KEYCHAIN_PASSWORD` — a random, CI-only keychain password.
+
+Set the repository Actions variable `IOS_SIGNING_ENABLED` to `true` only after
+all five secrets are present. This activates the signed archive job; otherwise
+the workflow remains green and publishes only the clearly labelled unsigned
+verification IPA.
+
+Set the external App Store privacy-policy URL to the published `PRIVACY.md` page
+or a permanent hosted equivalent before submission.
 
 See [FORMAT.md](FORMAT.md) for the public notebook format and
 [DECISIONS.md](DECISIONS.md) for scope decisions.

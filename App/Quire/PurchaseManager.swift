@@ -69,7 +69,7 @@ final class PurchaseManager: ObservableObject {
         #if DEBUG
         isPro = true
         #else
-        var entitled = Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+        var entitled = false
         for await result in Transaction.currentEntitlements {
             guard case let .verified(transaction) = result,
                   transaction.productID == Self.proProductID,

@@ -2,10 +2,15 @@ name: iPad app
 
 on:
   push:
+    branches: [master]
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  build:
+  verify:
     runs-on: xcode-27
     steps:
       - uses: actions/checkout@v4
@@ -13,12 +18,118 @@ jobs:
         run: brew install xcodegen
       - name: Generate Xcode project
         run: xcodegen generate
-      - name: Build for iPad Simulator
+      - name: Select an available iPad simulator
+        id: simulator
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          for runtime_devices in devices.values():
+              for device in runtime_devices:
+                  if "iPad" in device["name"] and device["isAvailable"]:
+                      print(device["udid"])
+                      raise SystemExit
+          raise SystemExit("No available iPad simulator found")')
+          xcrun simctl boot "$UDID" || true
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+      - name: Test on iPad Simulator
         run: >-
-          xcodebuild
+          xcodebuild test
           -project Quire.xcodeproj
           -scheme Quire
-          -sdk iphonesimulator
-          -destination 'generic/platform=iOS Simulator'
+          -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}'
           CODE_SIGNING_ALLOWED=NO
-          build
+      - name: Archive unsigned device build
+        run: >-
+          xcodebuild archive
+          -project Quire.xcodeproj
+          -scheme Quire
+          -configuration Release
+          -destination 'generic/platform=iOS'
+          -archivePath "$RUNNER_TEMP/Quire.xcarchive"
+          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGNING_REQUIRED=NO
+      - name: Package unsigned verification IPA
+        run: |
+          mkdir -p "$RUNNER_TEMP/Payload"
+          cp -R "$RUNNER_TEMP/Quire.xcarchive/Products/Applications/Quire.app" "$RUNNER_TEMP/Payload/"
+          ditto -c -k --sequesterRsrc --keepParent "$RUNNER_TEMP/Payload" "$RUNNER_TEMP/Quire-unsigned.ipa"
+      - name: Upload unsigned verification IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Quire-unsigned-ipa
+          path: ${{ runner.temp }}/Quire-unsigned.ipa
+          if-no-files-found: error
+
+  signed-ipa:
+    needs: verify
+    if: ${{ vars.IOS_SIGNING_ENABLED == 'true' }}
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: xcodegen generate
+      - name: Install signing assets
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          CERTIFICATE_PATH="$RUNNER_TEMP/certificate.p12"
+          PROFILE_PATH="$RUNNER_TEMP/profile.mobileprovision"
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+          echo -n "$CERTIFICATE_BASE64" | base64 --decode > "$CERTIFICATE_PATH"
+          echo -n "$PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/quire.mobileprovision"
+          security cms -D -i "$PROFILE_PATH" > "$RUNNER_TEMP/profile.plist"
+          /usr/libexec/PlistBuddy -c 'Print :Name' "$RUNNER_TEMP/profile.plist" > "$RUNNER_TEMP/profile-name.txt"
+      - name: Archive signed release
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: >-
+          xcodebuild archive
+          -project Quire.xcodeproj
+          -scheme Quire
+          -configuration Release
+          -destination 'generic/platform=iOS'
+          -archivePath "$RUNNER_TEMP/Quire.xcarchive"
+          DEVELOPMENT_TEAM="$APPLE_TEAM_ID"
+          CODE_SIGN_STYLE=Manual
+      - name: Export signed IPA
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          PROFILE_NAME=$(cat "$RUNNER_TEMP/profile-name.txt")
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>destination</key><string>export</string>
+            <key>method</key><string>app-store-connect</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+            <key>provisioningProfiles</key><dict>
+              <key>com.quireapp.Quire</key><string>$PROFILE_NAME</string>
+            </dict>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/Quire.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
+      - name: Upload signed IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Quire-signed-ipa
+          path: ${{ runner.temp }}/export/Quire.ipa
+          if-no-files-found: error

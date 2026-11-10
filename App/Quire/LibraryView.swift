@@ -76,6 +76,13 @@ struct LibraryView: View {
                 }
                 .searchable(text: $library.searchText, prompt: "Search notebooks")
                 .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        NavigationLink {
+                            SettingsView()
+                        } label: {
+                            Label("Settings", systemImage: "gearshape")
+                        }
+                    }
                     ToolbarItem(placement: .primaryAction) {
                         Menu {
                             Button {

@@ -5,3 +5,6 @@
 DerivedData/
 xcuserdata/
 *.xcuserstate
+*.xcarchive
+*.ipa
+ExportOptions.plist
