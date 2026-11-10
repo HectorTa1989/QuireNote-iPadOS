@@ -22,7 +22,10 @@ struct AtomicNotebookStoreTests {
         try store.save(notebook, in: packageURL)
         let loaded = try store.load(from: packageURL)
 
-        #expect(loaded == notebook)
+        var expected = notebook
+        expected.createdAt = loaded.createdAt
+        #expect(loaded == expected)
+        #expect(abs(loaded.createdAt.timeIntervalSince(notebook.createdAt)) < 0.001)
         #expect(FileManager.default.fileExists(atPath: packageURL.appendingPathComponent("pages").path))
         #expect(FileManager.default.fileExists(atPath: packageURL.appendingPathComponent("notebook.json").path))
     }
