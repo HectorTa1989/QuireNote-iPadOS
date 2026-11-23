@@ -1,7 +1,7 @@
 name: Quire
 
 options:
-  bundleIdPrefix: com.quireapp
+  bundleIdPrefix: com.quirenote
   deploymentTarget:
     iOS: "17.0"
   developmentLanguage: en
@@ -30,7 +30,7 @@ targets:
         product: QuireCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.quireapp.render
+        PRODUCT_BUNDLE_IDENTIFIER: com.quirenote.render
         GENERATE_INFOPLIST_FILE: YES
 
   Quire:
@@ -51,9 +51,9 @@ targets:
         CFBundleDocumentTypes:
           - CFBundleTypeName: QuireNote Notebook
             LSItemContentTypes:
-              - com.quireapp.notebook
+              - com.quirenote.notebook
         UTExportedTypeDeclarations:
-          - UTTypeIdentifier: com.quireapp.notebook
+          - UTTypeIdentifier: com.quirenote.notebook
             UTTypeDescription: QuireNote Notebook
             UTTypeConformsTo:
               - com.apple.package
@@ -67,7 +67,7 @@ targets:
       - target: QuireRender
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.quireapp.Quire
+        PRODUCT_BUNDLE_IDENTIFIER: com.quirenote.app
         PRODUCT_NAME: Quire
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
@@ -80,7 +80,7 @@ targets:
       - target: Quire
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.quireapp.QuireUITests
+        PRODUCT_BUNDLE_IDENTIFIER: com.quirenote.uitests
         GENERATE_INFOPLIST_FILE: YES
 
 schemes:

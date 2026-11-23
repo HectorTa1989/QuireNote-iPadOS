@@ -119,7 +119,7 @@ jobs:
             <key>signingStyle</key><string>manual</string>
             <key>teamID</key><string>$APPLE_TEAM_ID</string>
             <key>provisioningProfiles</key><dict>
-              <key>com.quireapp.Quire</key><string>$PROFILE_NAME</string>
+              <key>com.quirenote.app</key><string>$PROFILE_NAME</string>
             </dict>
           </dict></plist>
           EOF
