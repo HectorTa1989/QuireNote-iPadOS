@@ -127,5 +127,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Quire-signed-ipa
-          path: ${{ runner.temp }}/export/Quire.ipa
+          path: ${{ runner.temp }}/export/*.ipa
           if-no-files-found: error
