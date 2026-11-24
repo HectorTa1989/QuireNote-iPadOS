@@ -135,7 +135,9 @@ jobs:
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
         run: |
-          KEY_PATH="$RUNNER_TEMP/AuthKey_${APPSTORE_KEY_ID}.p8"
+          KEY_DIRECTORY="$HOME/.appstoreconnect/private_keys"
+          KEY_PATH="$KEY_DIRECTORY/AuthKey_${APPSTORE_KEY_ID}.p8"
+          mkdir -p "$KEY_DIRECTORY"
           printf '%s\n' "$APPSTORE_PRIVATE_KEY" > "$KEY_PATH"
           IPA_PATH=$(find "$RUNNER_TEMP/export" -maxdepth 1 -name '*.ipa' -print -quit)
           xcrun altool \
