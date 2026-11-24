@@ -146,3 +146,31 @@ jobs:
             --file "$IPA_PATH" \
             --apiKey "$APPSTORE_KEY_ID" \
             --apiIssuer "$APPSTORE_ISSUER_ID"
+
+      - name: Upload App Store screenshots
+        env:
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/private_keys"
+          printf '%s\n' "$APPSTORE_PRIVATE_KEY" > "$RUNNER_TEMP/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8"
+          python3 - <<'PY'
+          import json, os
+          with open(os.path.join(os.environ["RUNNER_TEMP"], "appstore_api_key.json"), "w") as f:
+              json.dump({
+                  "key_id": os.environ["APPSTORE_KEY_ID"],
+                  "issuer_id": os.environ["APPSTORE_ISSUER_ID"],
+                  "key": os.environ["APPSTORE_PRIVATE_KEY"],
+                  "in_house": False,
+              }, f)
+          PY
+          fastlane deliver \
+            --api_key_path "$RUNNER_TEMP/appstore_api_key.json" \
+            --app_identifier com.quirenote.app \
+            --screenshots_path fastlane/screenshots \
+            --skip_binary_upload true \
+            --skip_metadata true \
+            --skip_app_version_update true \
+            --run_precheck_before_submit false \
+            --force true
