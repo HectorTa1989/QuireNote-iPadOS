@@ -226,9 +226,11 @@ jobs:
           PROFILE_PATH="$RUNNER_TEMP/profile.provisionprofile"
           KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
           API_KEY_PATH="$RUNNER_TEMP/AuthKey_${APPSTORE_KEY_ID}.p8"
-          MAC_KEY_PATH="$RUNNER_TEMP/mac-app-distribution.key"
+          MAC_APP_KEY_PATH="$RUNNER_TEMP/mac-app-distribution.key"
+          MAC_INSTALLER_KEY_PATH="$RUNNER_TEMP/mac-installer-distribution.key"
           printf '%s\n' "$APPSTORE_PRIVATE_KEY" > "$API_KEY_PATH"
-          openssl genrsa -out "$MAC_KEY_PATH" 2048
+          openssl genrsa -out "$MAC_APP_KEY_PATH" 2048
+          openssl genrsa -out "$MAC_INSTALLER_KEY_PATH" 2048
           make_jwt() {
             python3 - "$API_KEY_PATH" "$APPSTORE_KEY_ID" "$APPSTORE_ISSUER_ID" <<'PY'
           import base64, json, subprocess, sys, time
@@ -256,8 +258,8 @@ jobs:
               -H "Authorization: Bearer $(make_jwt)" -H 'Content-Type: application/json' --data-binary @"$2"
           }
           create_certificate() {
-            local type="$1" prefix="$2"
-            openssl req -new -key "$MAC_KEY_PATH" -subj '/CN=QuireNote Mac Distribution/O=QuireNote/C=US' -out "$RUNNER_TEMP/$prefix.csr"
+            local type="$1" prefix="$2" key_path="$3"
+            openssl req -new -key "$key_path" -subj '/CN=QuireNote Mac Distribution/O=QuireNote/C=US' -out "$RUNNER_TEMP/$prefix.csr"
             python3 - "$type" "$RUNNER_TEMP/$prefix.csr" "$RUNNER_TEMP/$prefix.json" <<'PY'
           import base64,json,sys
           json.dump({'data':{'type':'certificates','attributes':{'certificateType':sys.argv[1],'csrContent':base64.b64encode(open(sys.argv[2],'rb').read()).decode()}}},open(sys.argv[3],'w'))
@@ -268,11 +270,12 @@ jobs:
           d=json.load(open(sys.argv[1]))['data']; open(sys.argv[2],'wb').write(base64.b64decode(d['attributes']['certificateContent'])); print(d['id'])
           PY
           }
-          MAC_APP_CERT_ID=$(create_certificate MAC_APP_DISTRIBUTION mac-app)
-          create_certificate MAC_INSTALLER_DISTRIBUTION mac-installer >/dev/null
+          MAC_APP_CERT_ID=$(create_certificate MAC_APP_DISTRIBUTION mac-app "$MAC_APP_KEY_PATH")
+          create_certificate MAC_INSTALLER_DISTRIBUTION mac-installer "$MAC_INSTALLER_KEY_PATH" >/dev/null
           openssl x509 -inform DER -in "$RUNNER_TEMP/mac-app.cer" -out "$RUNNER_TEMP/mac-app.pem"
           openssl x509 -inform DER -in "$RUNNER_TEMP/mac-installer.cer" -out "$RUNNER_TEMP/mac-installer.pem"
-          openssl pkcs12 -export -out "$CERTIFICATE_PATH" -inkey "$MAC_KEY_PATH" -in "$RUNNER_TEMP/mac-app.pem" -certfile "$RUNNER_TEMP/mac-installer.pem" -passout pass:"$CERTIFICATE_PASSWORD"
+          openssl pkcs12 -export -out "$APP_CERTIFICATE_PATH" -inkey "$MAC_APP_KEY_PATH" -in "$RUNNER_TEMP/mac-app.pem" -passout pass:"$CERTIFICATE_PASSWORD"
+          openssl pkcs12 -export -out "$INSTALLER_CERTIFICATE_PATH" -inkey "$MAC_INSTALLER_KEY_PATH" -in "$RUNNER_TEMP/mac-installer.pem" -passout pass:"$CERTIFICATE_PASSWORD"
           BUNDLE_ID=$(curl --fail-with-body -sS --get 'https://api.appstoreconnect.apple.com/v1/bundleIds' -H "Authorization: Bearer $(make_jwt)" --data-urlencode 'filter[identifier]=com.quirenote.app' | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"][0]["id"])')
           python3 - "$BUNDLE_ID" "$MAC_APP_CERT_ID" "$RUNNER_TEMP/profile.request.json" <<'PY'
           import json,sys
@@ -286,7 +289,8 @@ jobs:
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security import "$CERTIFICATE_PATH" -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security import "$APP_CERTIFICATE_PATH" -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security import "$INSTALLER_CERTIFICATE_PATH" -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
           security list-keychain -d user -s "$KEYCHAIN_PATH"
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
