@@ -1,4 +1,5 @@
 name: iPad app
+# Release signing retry after refreshing repository credentials.
 
 on:
   push:
