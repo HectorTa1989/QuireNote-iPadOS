@@ -242,7 +242,7 @@ jobs:
               assert data[p] == 2; n,p=read_len(data,p+1); return data[p:p+n],p+n
           def raw_sig(der):
               assert der[0] == 48; _,p=read_len(der,1); r,p=integer(der,p); s,p=integer(der,p)
-              return r.lstrip(b'\\0').rjust(32,b'\\0') + s.lstrip(b'\\0').rjust(32,b'\\0')
+              return r.lstrip(b'\0').rjust(32,b'\0') + s.lstrip(b'\0').rjust(32,b'\0')
           key, kid, issuer = sys.argv[1:]
           header=b64(json.dumps({'alg':'ES256','kid':kid,'typ':'JWT'},separators=(',',':')).encode())
           payload=b64(json.dumps({'iss':issuer,'iat':int(time.time()),'exp':int(time.time())+1100,'aud':'appstoreconnect-v1'},separators=(',',':')).encode())
