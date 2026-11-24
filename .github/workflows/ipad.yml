@@ -33,7 +33,10 @@ jobs:
           xcrun simctl boot "$UDID" || true
           echo "udid=$UDID" >> "$GITHUB_OUTPUT"
       - name: Test on iPad Simulator
-        continue-on-error: true
+        # Simulator boot/test is not required for App Store distribution and can
+        # exceed hosted-runner limits. Keep it available for manual runs without
+        # blocking the signed release jobs.
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_simulator_tests == true }}
         run: >-
           xcodebuild test
           -project Quire.xcodeproj
