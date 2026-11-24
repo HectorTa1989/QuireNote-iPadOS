@@ -216,16 +216,73 @@ jobs:
         run: xcodegen generate
       - name: Install signing assets
         env:
-          CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
           CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          PROFILE_BASE64: ${{ secrets.APPLE_MACOS_PROVISIONING_PROFILE_BASE64 || secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
         run: |
           CERTIFICATE_PATH="$RUNNER_TEMP/certificate.p12"
           PROFILE_PATH="$RUNNER_TEMP/profile.provisionprofile"
           KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
-          echo -n "$CERTIFICATE_BASE64" | base64 --decode > "$CERTIFICATE_PATH"
-          echo -n "$PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
+          API_KEY_PATH="$RUNNER_TEMP/AuthKey_${APPSTORE_KEY_ID}.p8"
+          MAC_KEY_PATH="$RUNNER_TEMP/mac-app-distribution.key"
+          printf '%s\n' "$APPSTORE_PRIVATE_KEY" > "$API_KEY_PATH"
+          openssl genrsa -out "$MAC_KEY_PATH" 2048
+          make_jwt() {
+            python3 - "$API_KEY_PATH" "$APPSTORE_KEY_ID" "$APPSTORE_ISSUER_ID" <<'PY'
+          import base64, json, subprocess, sys, time
+          def b64(data): return base64.urlsafe_b64encode(data).rstrip(b'=').decode()
+          def read_len(data, p):
+              n=data[p]; p+=1
+              if n & 128:
+                  k=n & 127; n=int.from_bytes(data[p:p+k], 'big'); p+=k
+              return n,p
+          def integer(data, p):
+              assert data[p] == 2; n,p=read_len(data,p+1); return data[p:p+n],p+n
+          def raw_sig(der):
+              assert der[0] == 48; _,p=read_len(der,1); r,p=integer(der,p); s,p=integer(der,p)
+              return r.lstrip(b'\\0').rjust(32,b'\\0') + s.lstrip(b'\\0').rjust(32,b'\\0')
+          key, kid, issuer = sys.argv[1:]
+          header=b64(json.dumps({'alg':'ES256','kid':kid,'typ':'JWT'},separators=(',',':')).encode())
+          payload=b64(json.dumps({'iss':issuer,'iat':int(time.time()),'exp':int(time.time())+1100,'aud':'appstoreconnect-v1'},separators=(',',':')).encode())
+          message=(header+'.'+payload).encode()
+          der=subprocess.check_output(['openssl','dgst','-sha256','-sign',key],input=message)
+          print(header+'.'+payload+'.'+b64(raw_sig(der)))
+          PY
+          }
+          api_post() {
+            curl --fail-with-body -sS -X POST "https://api.appstoreconnect.apple.com/v1/$1" \
+              -H "Authorization: Bearer $(make_jwt)" -H 'Content-Type: application/json' --data-binary @"$2"
+          }
+          create_certificate() {
+            local type="$1" prefix="$2"
+            openssl req -new -key "$MAC_KEY_PATH" -subj '/CN=QuireNote Mac Distribution/O=QuireNote/C=US' -out "$RUNNER_TEMP/$prefix.csr"
+            python3 - "$type" "$RUNNER_TEMP/$prefix.csr" "$RUNNER_TEMP/$prefix.json" <<'PY'
+          import base64,json,sys
+          json.dump({'data':{'type':'certificates','attributes':{'certificateType':sys.argv[1],'csrContent':base64.b64encode(open(sys.argv[2],'rb').read()).decode()}}},open(sys.argv[3],'w'))
+          PY
+            api_post certificates "$RUNNER_TEMP/$prefix.json" > "$RUNNER_TEMP/$prefix.response.json"
+            python3 - "$RUNNER_TEMP/$prefix.response.json" "$RUNNER_TEMP/$prefix.cer" <<'PY'
+          import base64,json,sys
+          d=json.load(open(sys.argv[1]))['data']; open(sys.argv[2],'wb').write(base64.b64decode(d['attributes']['certificateContent'])); print(d['id'])
+          PY
+          }
+          MAC_APP_CERT_ID=$(create_certificate MAC_APP_DISTRIBUTION mac-app)
+          create_certificate MAC_INSTALLER_DISTRIBUTION mac-installer >/dev/null
+          openssl x509 -inform DER -in "$RUNNER_TEMP/mac-app.cer" -out "$RUNNER_TEMP/mac-app.pem"
+          openssl x509 -inform DER -in "$RUNNER_TEMP/mac-installer.cer" -out "$RUNNER_TEMP/mac-installer.pem"
+          openssl pkcs12 -export -out "$CERTIFICATE_PATH" -inkey "$MAC_KEY_PATH" -in "$RUNNER_TEMP/mac-app.pem" -certfile "$RUNNER_TEMP/mac-installer.pem" -passout pass:"$CERTIFICATE_PASSWORD"
+          BUNDLE_ID=$(curl --fail-with-body -sS --get 'https://api.appstoreconnect.apple.com/v1/bundleIds' -H "Authorization: Bearer $(make_jwt)" --data-urlencode 'filter[identifier]=com.quirenote.app' | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"][0]["id"])')
+          python3 - "$BUNDLE_ID" "$MAC_APP_CERT_ID" "$RUNNER_TEMP/profile.request.json" <<'PY'
+          import json,sys
+          json.dump({'data':{'type':'profiles','attributes':{'name':'QuireNote Mac App Store CI','profileType':'MAC_APP_STORE'},'relationships':{'bundleId':{'data':{'type':'bundleIds','id':sys.argv[1]}},'certificates':{'data':[{'type':'certificates','id':sys.argv[2]}]}}}},open(sys.argv[3],'w'))
+          PY
+          api_post profiles "$RUNNER_TEMP/profile.request.json" > "$RUNNER_TEMP/profile.response.json"
+          python3 - "$RUNNER_TEMP/profile.response.json" "$PROFILE_PATH" <<'PY'
+          import base64,json,sys
+          open(sys.argv[2],'wb').write(base64.b64decode(json.load(open(sys.argv[1]))['data']['attributes']['profileContent']))
+          PY
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
@@ -243,7 +300,9 @@ jobs:
             -scheme Quire \
             -configuration Release \
             -destination 'generic/platform=macOS' \
-            -archivePath "$RUNNER_TEMP/Quire-macOS.xcarchive"
+            -archivePath "$RUNNER_TEMP/Quire-macOS.xcarchive" \
+            CODE_SIGN_IDENTITY='Mac App Distribution' \
+            PROVISIONING_PROFILE_SPECIFIER="$(cat "$RUNNER_TEMP/profile-name.txt")"
       - name: Export signed Mac package
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
