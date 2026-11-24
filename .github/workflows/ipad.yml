@@ -96,15 +96,17 @@ jobs:
       - name: Archive signed release
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: >-
-          xcodebuild archive
-          -project Quire.xcodeproj
-          -scheme Quire
-          -configuration Release
-          -destination 'generic/platform=iOS'
-          -archivePath "$RUNNER_TEMP/Quire.xcarchive"
-          DEVELOPMENT_TEAM="$APPLE_TEAM_ID"
-          CODE_SIGN_STYLE=Manual
+        run: |
+          PROFILE_NAME=$(cat "$RUNNER_TEMP/profile-name.txt")
+          xcodebuild archive \
+            -project Quire.xcodeproj \
+            -scheme Quire \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Quire.xcarchive" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME"
       - name: Export signed IPA
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
