@@ -61,6 +61,32 @@ jobs:
           path: ${{ runner.temp }}/Quire-unsigned.ipa
           if-no-files-found: error
 
+  macos-build:
+    needs: verify
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: xcodegen generate
+      - name: Archive unsigned Mac Catalyst build
+        run: >-
+          xcodebuild archive
+          -project Quire.xcodeproj
+          -scheme Quire
+          -configuration Release
+          -destination 'generic/platform=macOS'
+          -archivePath "$RUNNER_TEMP/Quire-macOS.xcarchive"
+          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGNING_REQUIRED=NO
+      - name: Upload Mac Catalyst archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: Quire-macOS-unsigned-archive
+          path: ${{ runner.temp }}/Quire-macOS.xcarchive
+          if-no-files-found: error
+
   signed-ipa:
     needs: verify
     if: ${{ vars.IOS_SIGNING_ENABLED == 'true' }}
