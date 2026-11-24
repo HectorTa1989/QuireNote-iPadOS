@@ -103,7 +103,7 @@ jobs:
       - name: Install signing assets
         env:
           CERTIFICATE_BASE64: ${{ secrets.APPLE_MAC_APP_CERTIFICATE_BASE64 }}
-          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_MAC_CERTIFICATE_PASSWORD }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_MAC_CERTIFICATE_PASSWORD_V2 }}
           PROFILE_BASE64: ${{ secrets.APPLE_MAC_PROVISIONING_PROFILE_BASE64 }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
@@ -218,7 +218,7 @@ jobs:
       - name: Install signing assets
         env:
           CERTIFICATE_BASE64: ${{ secrets.APPLE_MAC_APP_CERTIFICATE_BASE64 }}
-          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_MAC_CERTIFICATE_PASSWORD }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_MAC_CERTIFICATE_PASSWORD_V2 }}
           PROFILE_BASE64: ${{ secrets.APPLE_MAC_PROVISIONING_PROFILE_BASE64 }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
