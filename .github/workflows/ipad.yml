@@ -138,8 +138,9 @@ jobs:
           KEY_PATH="$RUNNER_TEMP/AuthKey_${APPSTORE_KEY_ID}.p8"
           printf '%s\n' "$APPSTORE_PRIVATE_KEY" > "$KEY_PATH"
           IPA_PATH=$(find "$RUNNER_TEMP/export" -maxdepth 1 -name '*.ipa' -print -quit)
-          xcrun iTMSTransporter \
-            -m upload \
-            -assetFile "$IPA_PATH" \
-            -apiKey "$APPSTORE_KEY_ID" \
-            -apiIssuer "$APPSTORE_ISSUER_ID"
+          xcrun altool \
+            --upload-app \
+            --type ios \
+            --file "$IPA_PATH" \
+            --apiKey "$APPSTORE_KEY_ID" \
+            --apiIssuer "$APPSTORE_ISSUER_ID"
