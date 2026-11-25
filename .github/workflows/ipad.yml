@@ -248,7 +248,7 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=macOS' \
             -archivePath "$RUNNER_TEMP/Quire-macOS.xcarchive" \
-            CODE_SIGN_IDENTITY='Mac App Distribution' \
+            CODE_SIGN_IDENTITY='3rd Party Mac Developer Application' \
             CODE_SIGNING_STYLE=Manual
       - name: Export signed Mac package
         env:
