@@ -217,11 +217,11 @@ jobs:
         run: xcodegen generate
       - name: Install signing assets
         env:
-          CERTIFICATE_BASE64: ${{ secrets.APPLE_MAC_APP_CERTIFICATE_BASE64_V2 }}
-          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_MAC_CERTIFICATE_PASSWORD_V3 }}
+          CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           INSTALLER_CERTIFICATE_BASE64: ${{ secrets.APPLE_MAC_INSTALLER_CERTIFICATE_BASE64 }}
           INSTALLER_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_MAC_INSTALLER_CERTIFICATE_PASSWORD }}
-          PROFILE_BASE64: ${{ secrets.APPLE_MAC_PROVISIONING_PROFILE_BASE64 }}
+          PROFILE_BASE64: ${{ secrets.APPLE_MAC_CATALYST_PROVISIONING_PROFILE_BASE64 }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
           CERTIFICATE_PATH="$RUNNER_TEMP/certificate.p12"
@@ -251,9 +251,9 @@ jobs:
             -project Quire.xcodeproj \
             -scheme Quire \
             -configuration Release \
-            -destination 'generic/platform=macOS' \
+            -destination 'generic/platform=macOS,variant=Mac Catalyst' \
             -archivePath "$RUNNER_TEMP/Quire-macOS.xcarchive" \
-            CODE_SIGN_IDENTITY='3rd Party Mac Developer Application' \
+            CODE_SIGN_IDENTITY='Apple Distribution' \
             CODE_SIGNING_STYLE=Manual
       - name: Export signed Mac package
         env:
@@ -266,7 +266,8 @@ jobs:
           <plist version="1.0"><dict>
             <key>destination</key><string>export</string>
             <key>method</key><string>app-store-connect</string>
-            <key>signingCertificate</key><string>Mac Installer Distribution</string>
+            <key>signingCertificate</key><string>Apple Distribution</string>
+            <key>installerSigningCertificate</key><string>Mac Installer Distribution</string>
             <key>signingStyle</key><string>manual</string>
             <key>teamID</key><string>$APPLE_TEAM_ID</string>
             <key>provisioningProfiles</key><dict>
