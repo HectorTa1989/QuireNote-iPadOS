@@ -217,8 +217,10 @@ jobs:
         run: xcodegen generate
       - name: Install signing assets
         env:
-          CERTIFICATE_BASE64: ${{ secrets.APPLE_MAC_APP_CERTIFICATE_BASE64_V2 }}
-          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_MAC_CERTIFICATE_PASSWORD_V3 }}
+          # Mac Catalyst uses the same Apple Distribution identity as the iOS target.
+          # The separate Mac Installer identity below signs the exported .pkg.
+          CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           INSTALLER_CERTIFICATE_BASE64: ${{ secrets.APPLE_MAC_INSTALLER_CERTIFICATE_BASE64 }}
           INSTALLER_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_MAC_INSTALLER_CERTIFICATE_PASSWORD }}
           PROFILE_BASE64: ${{ secrets.APPLE_MAC_CATALYST_PROVISIONING_PROFILE_BASE64 }}
@@ -253,7 +255,7 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=macOS' \
             -archivePath "$RUNNER_TEMP/Quire-macOS.xcarchive" \
-            CODE_SIGN_IDENTITY='3rd Party Mac Developer Application' \
+            CODE_SIGN_IDENTITY='Apple Distribution' \
             CODE_SIGNING_STYLE=Manual
       - name: Export signed Mac package
         env:
