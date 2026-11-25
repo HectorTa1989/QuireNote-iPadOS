@@ -102,9 +102,9 @@ jobs:
         run: xcodegen generate
       - name: Install signing assets
         env:
-          CERTIFICATE_BASE64: ${{ secrets.APPLE_MAC_APP_CERTIFICATE_BASE64_V2 }}
-          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_MAC_CERTIFICATE_PASSWORD_V3 }}
-          PROFILE_BASE64: ${{ secrets.APPLE_MAC_PROVISIONING_PROFILE_BASE64 }}
+          CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
           CERTIFICATE_PATH="$RUNNER_TEMP/certificate.p12"
