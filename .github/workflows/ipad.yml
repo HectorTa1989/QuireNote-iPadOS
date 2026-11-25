@@ -237,7 +237,8 @@ jobs:
           cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/quire-macos.mobileprovision"
           security cms -D -i "$PROFILE_PATH" > "$RUNNER_TEMP/profile.plist"
           /usr/libexec/PlistBuddy -c 'Print :Name' "$RUNNER_TEMP/profile.plist" > "$RUNNER_TEMP/profile-name.txt"
-          sed -i "s/QuireNote App Store 2026/$(cat \"$RUNNER_TEMP/profile-name.txt\")/" project.yml
+          PROFILE_NAME=$(cat "$RUNNER_TEMP/profile-name.txt")
+          sed -i '' "s|QuireNote App Store 2026|$PROFILE_NAME|" project.yml
           xcodegen generate
       - name: Archive signed Mac Catalyst release
         run: |
