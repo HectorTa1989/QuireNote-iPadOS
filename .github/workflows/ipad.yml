@@ -178,7 +178,7 @@ jobs:
             --apiIssuer "$APPSTORE_ISSUER_ID"
 
       - name: Upload App Store screenshots
-        if: always()
+        if: github.event_name == 'workflow_dispatch'
         env:
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
@@ -269,26 +269,16 @@ jobs:
             CODE_SIGN_IDENTITY='3rd Party Mac Developer Application' \
             CODE_SIGNING_STYLE=Manual
       - name: Export signed Mac package
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          PROFILE_NAME=$(cat "$RUNNER_TEMP/catalyst-profile-name.txt")
-          cat > "$RUNNER_TEMP/MacExportOptions.plist" <<EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0"><dict>
-            <key>destination</key><string>export</string>
-            <key>method</key><string>app-store-connect</string>
-            <key>signingCertificate</key><string>Apple Distribution</string>
-            <key>installerSigningCertificate</key><string>3rd Party Mac Developer Installer</string>
-            <key>signingStyle</key><string>manual</string>
-            <key>teamID</key><string>$APPLE_TEAM_ID</string>
-            <key>provisioningProfiles</key><dict>
-              <key>com.quirenote.app</key><string>$PROFILE_NAME</string>
-            </dict>
-          </dict></plist>
-          EOF
-          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Quire-macOS.xcarchive" -exportPath "$RUNNER_TEMP/mac-export" -exportOptionsPlist "$RUNNER_TEMP/MacExportOptions.plist"
+          APP_PATH="$RUNNER_TEMP/Quire-macOS.xcarchive/Products/Applications/Quire.app"
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+          mkdir -p "$RUNNER_TEMP/mac-export"
+          productbuild \
+            --sign '3rd Party Mac Developer Installer' \
+            --component "$APP_PATH" \
+            /Applications \
+            "$RUNNER_TEMP/mac-export/QuireNote-macOS.pkg"
+          pkgutil --check-signature "$RUNNER_TEMP/mac-export/QuireNote-macOS.pkg"
       - name: Upload signed Mac package artifact
         uses: actions/upload-artifact@v4
         with:
