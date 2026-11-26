@@ -272,6 +272,8 @@ jobs:
         run: |
           APP_PATH="$RUNNER_TEMP/Quire-macOS.xcarchive/Products/Applications/Quire.app"
           codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+          codesign --display --entitlements :- "$APP_PATH" > "$RUNNER_TEMP/mac-entitlements.plist"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.security.app-sandbox' "$RUNNER_TEMP/mac-entitlements.plist")" = true
           mkdir -p "$RUNNER_TEMP/mac-export"
           productbuild \
             --sign '3rd Party Mac Developer Installer' \
