@@ -149,7 +149,7 @@ def configure_iap(token):
         matches = [point for point in points if point["attributes"]["customerPrice"] == "14.99"]
         if len(matches) != 1:
             raise RuntimeError(f"Expected one USD 14.99 price point; found {len(matches)}")
-        price_id = "launch-price"
+        price_id = "${launch-price}"
         body = {"data": {"type": "inAppPurchasePriceSchedules", "relationships": {
             "inAppPurchase": {"data": {"type": "inAppPurchases", "id": product_id}},
             "baseTerritory": {"data": {"type": "territories", "id": "USA"}},
