@@ -1,0 +1,41 @@
+name: App Store review information
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: Inspect status or update App Review notes
+        required: true
+        default: status
+        type: choice
+        options: [status, write-notes]
+      platform:
+        description: Platform for write-notes
+        required: false
+        default: IOS
+        type: choice
+        options: [IOS, MAC_OS]
+
+permissions:
+  contents: read
+
+jobs:
+  review-information:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install App Store Connect client dependency
+        run: python -m pip install --disable-pip-version-check PyJWT cryptography
+      - name: ${{ inputs.command == 'status' && 'Read App Store status' || 'Update App Review notes' }}
+        env:
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: >-
+          python scripts/appstore_review.py
+          '${{ inputs.command }}'
+          --platform '${{ inputs.platform }}'
+          --notes-file APP_REVIEW_NOTES.md
