@@ -144,7 +144,7 @@ def attach_demo(token, platform, file):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["status", "write-notes", "list-builds", "select-build", "attach-demo"])
+    parser.add_argument("command", choices=["status", "write-notes", "list-builds", "select-build", "attach-demo", "list-submissions", "list-iap"])
     parser.add_argument("--platform", choices=["IOS", "MAC_OS"])
     parser.add_argument("--notes-file", type=Path)
     parser.add_argument("--build-number")
@@ -155,6 +155,20 @@ def main():
         for build in list(builds(token))[:12]:
             print(f"{build['platform']} {build['version']} build {build['number']}: "
                   f"{build['state']}; id={build['id']}")
+        return
+    if args.command == "list-submissions":
+        response = api_request(token, "GET", f"/apps/{APP_ID}/reviewSubmissions?limit=200")
+        for item in response["data"]:
+            attrs = item["attributes"]
+            print(f"{attrs.get('platform')}: {attrs.get('state')}; id={item['id']}")
+        return
+    if args.command == "list-iap":
+        response = api_request(token, "GET", f"/apps/{APP_ID}/inAppPurchasesV2?limit=200")
+        for item in response["data"]:
+            attrs = item["attributes"]
+            print(f"{attrs.get('productId')}: {attrs.get('state')} ({attrs.get('inAppPurchaseType')})")
+        if not response["data"]:
+            print("No in-app purchases configured")
         return
     if args.command == "attach-demo":
         if not args.platform or not args.file:
