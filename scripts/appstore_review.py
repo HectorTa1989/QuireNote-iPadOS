@@ -129,7 +129,7 @@ def configure_iap(token):
     if not any(loc["attributes"]["locale"] == "en-US" for loc in localizations):
         body = {"data": {"type": "inAppPurchaseLocalizations", "attributes": {
             "locale": "en-US", "name": "QuireNote Pro Lifetime",
-            "description": "Unlock unlimited notebooks with one purchase. No subscription."
+            "description": "Unlimited notebooks. One purchase. No subscription."
         }, "relationships": {"version": {"data": {"type": "inAppPurchaseVersions", "id": version["id"]}}}}}
         api_request(token, "POST", "/v2/inAppPurchaseLocalizations", body)
         print("Added English purchase description")
