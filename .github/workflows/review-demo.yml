@@ -72,6 +72,7 @@ jobs:
             -resultBundlePath "$RESULT" \
             -parallel-testing-enabled NO \
             -only-testing:QuireUITests/QuireUITests/testReviewDemoFlow \
+            -only-testing:QuireUITests/QuireUITests/testProPaywallScreenshot \
             CODE_SIGNING_ALLOWED=NO \
             2>&1 | tee "$RUNNER_TEMP/review-demo-test.log"
           TEST_STATUS=${PIPESTATUS[0]}

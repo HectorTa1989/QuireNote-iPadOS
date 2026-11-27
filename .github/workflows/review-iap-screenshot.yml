@@ -36,7 +36,9 @@ jobs:
           from pathlib import Path
 
           directory = Path('demo/review-demo-attachments')
-          entries = json.loads((directory / 'manifest.json').read_text())
+          results = json.loads((directory / 'manifest.json').read_text())
+          entries = [attachment for result in results if 'testProPaywallScreenshot' in result['testIdentifier']
+                     for attachment in result['attachments']]
           matches = [entry for entry in entries
                      if entry.get('suggestedHumanReadableName', '').startswith('07-pro_')
                      and entry.get('exportedFileName', '').endswith('.png')]

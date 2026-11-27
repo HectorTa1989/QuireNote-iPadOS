@@ -9,11 +9,12 @@ struct LibraryView: View {
     @State private var isCreatingNotebook = false
     @State private var isImportingPDF = false
     @State private var isShowingPaywall = false
+    @State private var preferredCompactColumn = NavigationSplitViewColumn.detail
 
     private let columns = [GridItem(.adaptive(minimum: 180, maximum: 260), spacing: 24)]
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(preferredCompactColumn: $preferredCompactColumn) {
             List {
                 Section("Library") {
                     Label("All Notebooks", systemImage: "books.vertical")

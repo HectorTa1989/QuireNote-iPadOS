@@ -45,7 +45,9 @@ jobs:
 
           device = '${{ inputs.device }}'
           manifest = json.loads(Path('demo/review-demo-attachments/manifest.json').read_text())
-          videos = [entry for entry in manifest if entry.get('suggestedHumanReadableName', '').startswith('Screen Recording')
+          entries = [attachment for result in manifest if 'testReviewDemoFlow' in result['testIdentifier']
+                     for attachment in result['attachments']]
+          videos = [entry for entry in entries if entry.get('suggestedHumanReadableName', '').startswith('Screen Recording')
                     and entry.get('exportedFileName', '').endswith('.mp4')]
           if len(videos) != 1:
               raise SystemExit(f'Expected exactly one XCTest screen recording; found {len(videos)}')

@@ -64,6 +64,21 @@ final class QuireUITests: XCTestCase {
         }
     }
 
+    func testProPaywallScreenshot() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ApplePersistenceIgnoreState", "YES", "-QuireReviewDemo"]
+        app.launch()
+
+        let settings = app.buttons["Settings"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 20), app.debugDescription)
+        settings.tap()
+        let unlock = app.buttons["Unlock QuireNote Pro"]
+        XCTAssertTrue(unlock.waitForExistence(timeout: 10), app.debugDescription)
+        unlock.tap()
+        XCTAssertTrue(app.staticTexts["Pay once. Keep your files."].waitForExistence(timeout: 10), app.debugDescription)
+        capture("07-pro", in: app)
+    }
+
     private func capture(_ name: String, in app: XCUIApplication) {
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = name

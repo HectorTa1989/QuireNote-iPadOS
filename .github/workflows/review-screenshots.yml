@@ -52,7 +52,8 @@ jobs:
               ('ipad', '13-inch', 'iPad Pro (13-inch) (M4)'),
           ]:
               directory = Path(device) / 'review-demo-attachments'
-              entries = json.loads((directory / 'manifest.json').read_text())
+              results = json.loads((directory / 'manifest.json').read_text())
+              entries = [attachment for result in results for attachment in result['attachments']]
               for index, screenshot_name in enumerate(['04-editor', '03-library-with-notebook'], 1):
                   matches = [entry for entry in entries
                              if entry.get('suggestedHumanReadableName', '').startswith(screenshot_name + '_')
