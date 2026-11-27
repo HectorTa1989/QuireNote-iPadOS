@@ -10,3 +10,5 @@ xcuserdata/
 ExportOptions.plist
 .signing/
 artifacts/review-demo-run-*/
+artifacts/signed-build-*/
+scripts/__pycache__/
