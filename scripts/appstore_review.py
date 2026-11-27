@@ -1,6 +1,7 @@
 """Inspect and update QuireNote review information using App Store Connect API."""
 
 import argparse
+import hashlib
 import json
 import os
 import time
@@ -87,18 +88,78 @@ def builds(token):
         }
 
 
+def attach_demo(token, platform, file):
+    entries = [entry for entry in versions(token) if entry["platform"] == platform]
+    if len(entries) != 1 or not entries[0]["review_detail_id"]:
+        raise RuntimeError(f"Expected exactly one {platform} review detail")
+    detail_id = entries[0]["review_detail_id"]
+    size = file.stat().st_size
+    if size == 0 or file.suffix.lower() != ".mp4" or "simulator" not in file.name.lower():
+        raise RuntimeError("Expected a nonempty, explicitly labeled simulator MP4")
+    existing = api_request(token, "GET", f"/appStoreReviewDetails/{detail_id}/appStoreReviewAttachments")
+    for item in existing.get("data", []):
+        attributes = item.get("attributes", {})
+        if attributes.get("fileName") == file.name and attributes.get("fileSize") == size:
+            print(f"Attachment already present for {platform}: {file.name}")
+            return
+    body = {"data": {"type": "appStoreReviewAttachments",
+                     "attributes": {"fileName": file.name, "fileSize": size},
+                     "relationships": {"appStoreReviewDetail": {
+                         "data": {"type": "appStoreReviewDetails", "id": detail_id}}}}}
+    reservation = api_request(token, "POST", "/appStoreReviewAttachments", body)["data"]
+    attachment_id = reservation["id"]
+    operations = reservation["attributes"]["uploadOperations"]
+    if not operations:
+        raise RuntimeError("Apple returned no upload operations")
+    checksum = hashlib.md5()
+    with file.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(8 * 1024 * 1024), b""):
+            checksum.update(chunk)
+    with file.open("rb") as stream:
+        for operation in operations:
+            stream.seek(operation["offset"])
+            chunk = stream.read(operation["length"])
+            if len(chunk) != operation["length"]:
+                raise RuntimeError("Could not read the requested video byte range")
+            headers = {header["name"]: header["value"] for header in operation["requestHeaders"]}
+            request = urllib.request.Request(operation["url"], data=chunk,
+                                             method=operation["method"], headers=headers)
+            with urllib.request.urlopen(request, timeout=180) as response:
+                if response.status < 200 or response.status >= 300:
+                    raise RuntimeError(f"Video part upload failed: HTTP {response.status}")
+    commit = {"data": {"type": "appStoreReviewAttachments", "id": attachment_id,
+                       "attributes": {"uploaded": True, "sourceFileChecksum": checksum.hexdigest()}}}
+    api_request(token, "PATCH", f"/appStoreReviewAttachments/{attachment_id}", commit)
+    for _ in range(30):
+        status = api_request(token, "GET", f"/appStoreReviewAttachments/{attachment_id}")
+        state = status["data"]["attributes"].get("assetDeliveryState", {}).get("state")
+        if state == "COMPLETE":
+            print(f"Attached {file.name} to {platform} App Review detail; state=COMPLETE")
+            return
+        if state == "FAILED":
+            raise RuntimeError(f"App Review attachment processing failed: {file.name}")
+        time.sleep(10)
+    raise RuntimeError(f"App Review attachment did not finish processing: {file.name}")
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["status", "write-notes", "list-builds", "select-build"])
+    parser.add_argument("command", choices=["status", "write-notes", "list-builds", "select-build", "attach-demo"])
     parser.add_argument("--platform", choices=["IOS", "MAC_OS"])
     parser.add_argument("--notes-file", type=Path)
     parser.add_argument("--build-number")
+    parser.add_argument("--file", type=Path)
     args = parser.parse_args()
     token = token_from_environment()
     if args.command == "list-builds":
         for build in list(builds(token))[:12]:
             print(f"{build['platform']} {build['version']} build {build['number']}: "
                   f"{build['state']}; id={build['id']}")
+        return
+    if args.command == "attach-demo":
+        if not args.platform or not args.file:
+            parser.error("attach-demo requires --platform and --file")
+        attach_demo(token, args.platform, args.file)
         return
     entries = list(versions(token))
     if args.command == "select-build":

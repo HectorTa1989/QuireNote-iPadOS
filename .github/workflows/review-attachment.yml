@@ -1,0 +1,65 @@
+name: Attach simulator demo to App Review
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful Review demo captures workflow run ID
+        required: true
+        type: string
+      device:
+        description: Device to attach
+        required: true
+        type: choice
+        options: [iphone, ipad, mac]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  attach:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install App Store Connect client dependency
+        run: python -m pip install --disable-pip-version-check PyJWT cryptography
+      - name: Download test recording
+        uses: actions/download-artifact@v4
+        with:
+          name: QuireNote-review-demo-${{ inputs.device }}
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: demo
+      - name: Select real-app test recording
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import shutil
+          from pathlib import Path
+
+          device = '${{ inputs.device }}'
+          manifest = json.loads(Path('demo/review-demo-attachments/manifest.json').read_text())
+          videos = [entry for entry in manifest if entry.get('suggestedHumanReadableName', '').startswith('Screen Recording')
+                    and entry.get('exportedFileName', '').endswith('.mp4')]
+          if len(videos) != 1:
+              raise SystemExit(f'Expected exactly one XCTest screen recording; found {len(videos)}')
+          source = Path('demo/review-demo-attachments') / videos[0]['exportedFileName']
+          destination = Path(f'QuireNote-{device}-simulator-demo.mp4')
+          shutil.copyfile(source, destination)
+          print(f'Selected {destination.name} ({destination.stat().st_size} bytes)')
+          PY
+      - name: Attach clearly labeled simulator demo
+        env:
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: >-
+          python scripts/appstore_review.py attach-demo
+          --platform '${{ inputs.device == 'mac' && 'MAC_OS' || 'IOS' }}'
+          --file 'QuireNote-${{ inputs.device }}-simulator-demo.mp4'
