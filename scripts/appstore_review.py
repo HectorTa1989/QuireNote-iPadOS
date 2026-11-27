@@ -72,13 +72,34 @@ def versions(token):
         }
 
 
+def builds(token):
+    query = urllib.parse.urlencode({"limit": "200", "include": "preReleaseVersion", "sort": "-uploadedDate"})
+    response = api_request(token, "GET", f"/apps/{APP_ID}/builds?{query}")
+    included = {(item["type"], item["id"]): item for item in response.get("included", [])}
+    for build in response["data"]:
+        prerelease_data = build.get("relationships", {}).get("preReleaseVersion", {}).get("data")
+        prerelease = included.get(("preReleaseVersions", prerelease_data["id"])) if prerelease_data else None
+        yield {
+            "id": build["id"],
+            "number": build["attributes"].get("version"),
+            "state": build["attributes"].get("processingState"),
+            "platform": prerelease.get("attributes", {}).get("platform") if prerelease else None,
+            "version": prerelease.get("attributes", {}).get("version") if prerelease else None,
+        }
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["status", "write-notes"])
+    parser.add_argument("command", choices=["status", "write-notes", "list-builds"])
     parser.add_argument("--platform", choices=["IOS", "MAC_OS"])
     parser.add_argument("--notes-file", type=Path)
     args = parser.parse_args()
     token = token_from_environment()
+    if args.command == "list-builds":
+        for build in list(builds(token))[:12]:
+            print(f"{build['platform']} {build['version']} build {build['number']}: "
+                  f"{build['state']}; id={build['id']}")
+        return
     entries = list(versions(token))
     if args.command == "status":
         for entry in entries:

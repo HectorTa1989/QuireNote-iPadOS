@@ -8,7 +8,7 @@ on:
         required: true
         default: status
         type: choice
-        options: [status, write-notes]
+        options: [status, list-builds, write-notes]
       platform:
         description: Platform for write-notes
         required: false
