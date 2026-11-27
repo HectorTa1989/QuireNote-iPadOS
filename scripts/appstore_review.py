@@ -160,6 +160,28 @@ def configure_iap(token):
                               "inAppPurchasePricePoint": {"data": {"type": "inAppPurchasePricePoints", "id": matches[0]["id"]}}}}]}
         api_request(token, "POST", "/inAppPurchasePriceSchedules", body)
         print("Set USD 14.99 launch price")
+    try:
+        availability = api_request(token, "GET", f"/v2/inAppPurchases/{product_id}/inAppPurchaseAvailability")["data"]
+    except RuntimeError as error:
+        if "HTTP 404" not in str(error):
+            raise
+        availability = None
+    if not availability:
+        url = "/territories?limit=200"
+        territories = []
+        while url:
+            page = api_request(token, "GET", url)
+            territories += [{"type": "territories", "id": item["id"]} for item in page["data"]]
+            url = page.get("links", {}).get("next")
+        if not territories:
+            raise RuntimeError("Apple returned no available territories")
+        body = {"data": {"type": "inAppPurchaseAvailabilities",
+                         "attributes": {"availableInNewTerritories": True},
+                         "relationships": {
+                             "inAppPurchase": {"data": {"type": "inAppPurchases", "id": product_id}},
+                             "availableTerritories": {"data": territories}}}}
+        api_request(token, "POST", "/inAppPurchaseAvailabilities", body)
+        print(f"Enabled Pro purchase in {len(territories)} regions")
     print(f"QuireNote Pro: id={product_id}; version={version['id']}; state={version['attributes']['state']}")
 
 
