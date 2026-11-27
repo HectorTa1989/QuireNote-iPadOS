@@ -20,6 +20,7 @@ final class QuireUITests: XCTestCase {
         capture("01-library", in: app)
 
         app.buttons["New Notebook"].tap()
+        capture("02-after-new-notebook-tap", in: app)
         XCTAssertTrue(app.textFields["Title"].waitForExistence(timeout: 5), app.debugDescription)
         let title = "Review Notebook \(UUID().uuidString.prefix(4))"
         let titleField = app.textFields["Title"]

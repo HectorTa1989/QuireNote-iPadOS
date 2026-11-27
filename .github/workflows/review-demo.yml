@@ -2,16 +2,24 @@ name: Review demo captures
 
 on:
   workflow_dispatch:
+    inputs:
+      device:
+        description: Capture all devices or one device
+        type: choice
+        required: true
+        default: all
+        options: [all, iphone, ipad, mac]
 
 permissions:
   contents: read
 
 jobs:
   capture:
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        device: [iphone, ipad, mac]
+        device: ${{ fromJSON(inputs.device == 'all' && '["iphone","ipad","mac"]' || format('["{0}"]', inputs.device)) }}
     runs-on: xcode-27
     steps:
       - uses: actions/checkout@v4

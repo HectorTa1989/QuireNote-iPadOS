@@ -40,6 +40,8 @@ struct NotebookView: View {
 
     private var editor: some View {
         VStack(spacing: 0) {
+            pageStrip
+
             ZStack {
                 Color(uiColor: .secondarySystemBackground)
                 if session.currentBackground != nil {
@@ -62,7 +64,6 @@ struct NotebookView: View {
                 }
             }
 
-            pageStrip
         }
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
