@@ -9,45 +9,42 @@ struct NewNotebookView: View {
     @State private var size = PaperSize.a4
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Notebook") {
-                    TextField("Title", text: $title)
-                }
-                Section("Paper") {
-                    Picker("Template", selection: $kind) {
-                        ForEach(PaperKind.allCases, id: \.self) { kind in
-                            Text(kind.displayName).tag(kind)
-                        }
-                    }
-                    Picker("Size", selection: $size) {
-                        Text("A4").tag(PaperSize.a4)
-                        Text("US Letter").tag(PaperSize.usLetter)
-                    }
-                }
+        Form {
+            Section("Notebook") {
+                TextField("Title", text: $title)
             }
-            .navigationTitle("New Notebook")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Create") {
-                        Task {
-                            if await library.createNotebook(
-                                title: title.trimmingCharacters(in: .whitespacesAndNewlines),
-                                paper: Paper(kind: kind, size: size)
-                            ) != nil {
-                                dismiss()
-                            }
-                        }
+            Section("Paper") {
+                Picker("Template", selection: $kind) {
+                    ForEach(PaperKind.allCases, id: \.self) { kind in
+                        Text(kind.displayName).tag(kind)
                     }
-                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                Picker("Size", selection: $size) {
+                    Text("A4").tag(PaperSize.a4)
+                    Text("US Letter").tag(PaperSize.usLetter)
                 }
             }
         }
-        .presentationDetents([.medium])
+        .navigationTitle("New Notebook")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Create") {
+                    Task {
+                        if await library.createNotebook(
+                            title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+                            paper: Paper(kind: kind, size: size)
+                        ) != nil {
+                            dismiss()
+                        }
+                    }
+                }
+                .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
     }
 }
 

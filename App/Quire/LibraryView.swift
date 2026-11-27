@@ -82,6 +82,9 @@ struct LibraryView: View {
                 .navigationDestination(for: NotebookSummary.self) { summary in
                     NotebookView(packageURL: summary.packageURL)
                 }
+                .navigationDestination(isPresented: $isCreatingNotebook) {
+                    NewNotebookView()
+                }
                 .searchable(text: $library.searchText, prompt: "Search notebooks")
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
@@ -132,9 +135,6 @@ struct LibraryView: View {
             } else if case let .failure(error) = result {
                 library.errorMessage = error.localizedDescription
             }
-        }
-        .sheet(isPresented: $isCreatingNotebook) {
-            NewNotebookView()
         }
         .sheet(isPresented: $isShowingPaywall) {
             PaywallView()
