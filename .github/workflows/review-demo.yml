@@ -1,0 +1,88 @@
+name: Review demo captures
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [iphone, ipad, mac]
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: xcodegen generate
+      - name: Select destination
+        id: destination
+        shell: bash
+        run: |
+          if [[ '${{ matrix.device }}' == mac ]]; then
+            echo 'value=platform=macOS,variant=Mac Catalyst' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          kind = sys.argv[1]
+          devices = json.load(sys.stdin)["devices"]
+          matches = [(runtime, d) for runtime, entries in devices.items() for d in entries
+                     if d["isAvailable"] and d["name"].startswith("iPhone" if kind == "iphone" else "iPad")]
+          if not matches:
+              raise SystemExit("No available " + kind + " simulator")
+          print(sorted(matches, key=lambda item: item[0], reverse=True)[0][1]["udid"])
+          ' '${{ matrix.device }}')
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl status_bar "$UDID" override --time '9:41' --dataNetwork wifi --wifiMode active --wifiBars 3 --batteryState charged --batteryLevel 100
+          echo "value=platform=iOS Simulator,id=$UDID" >> "$GITHUB_OUTPUT"
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+      - name: Record running app and test real UI
+        shell: bash
+        run: |
+          RESULT="$RUNNER_TEMP/QuireNote-${{ matrix.device }}.xcresult"
+          VIDEO="$RUNNER_TEMP/QuireNote-${{ matrix.device }}-simulator.mp4"
+          if [[ '${{ matrix.device }}' != mac ]]; then
+            xcrun simctl io '${{ steps.destination.outputs.udid }}' recordVideo --codec=h264 "$VIDEO" > "$RUNNER_TEMP/record.log" 2>&1 &
+            RECORD_PID=$!
+          fi
+          set +e
+          xcodebuild test \
+            -project Quire.xcodeproj \
+            -scheme Quire \
+            -configuration Release \
+            -destination '${{ steps.destination.outputs.value }}' \
+            -resultBundlePath "$RESULT" \
+            -parallel-testing-enabled NO \
+            -only-testing:QuireUITests/QuireUITests/testReviewDemoFlow \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee "$RUNNER_TEMP/review-demo-test.log"
+          TEST_STATUS=${PIPESTATUS[0]}
+          if [[ '${{ matrix.device }}' != mac ]]; then
+            kill -INT "$RECORD_PID" 2>/dev/null || true
+            wait "$RECORD_PID" 2>/dev/null || true
+          fi
+          mkdir -p "$RUNNER_TEMP/review-demo-attachments"
+          xcrun xcresulttool export attachments \
+            --path "$RESULT" \
+            --output-path "$RUNNER_TEMP/review-demo-attachments" \
+            2>&1 | tee "$RUNNER_TEMP/attachment-export.log" || true
+          find "$RUNNER_TEMP/review-demo-attachments" -type f -maxdepth 3 -print
+          exit "$TEST_STATUS"
+      - name: Upload demo videos and test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: QuireNote-review-demo-${{ matrix.device }}
+          path: |
+            ${{ runner.temp }}/QuireNote-${{ matrix.device }}-simulator.mp4
+            ${{ runner.temp }}/review-demo-attachments/
+            ${{ runner.temp }}/review-demo-test.log
+            ${{ runner.temp }}/record.log
+            ${{ runner.temp }}/attachment-export.log
+          if-no-files-found: error

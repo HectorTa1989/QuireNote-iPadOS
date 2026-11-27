@@ -170,7 +170,7 @@ private struct HandwritingSearchView: View {
                     ContentUnavailableView(
                         "Search your handwriting",
                         systemImage: "text.magnifyingglass",
-                        description: Text("Recognition runs on this iPad and stays inside the notebook.")
+                        description: Text("Recognition runs on this device and stays inside the notebook.")
                     )
                 } else if session.searchResults.isEmpty {
                     ContentUnavailableView.search(text: session.searchText)

@@ -145,10 +145,15 @@ struct NotebookRepository {
     }
 
     private func withAccess<T>(to url: URL, perform body: () throws -> T) throws -> T {
-        guard url.startAccessingSecurityScopedResource() else {
+        let hasScopedAccess = url.startAccessingSecurityScopedResource()
+        let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .standardizedFileURL
+        let path = url.standardizedFileURL.path
+        let isInAppDocuments = path == documentsURL.path || path.hasPrefix(documentsURL.path + "/")
+        guard hasScopedAccess || isInAppDocuments else {
             throw NotebookRepositoryError.folderAccessDenied
         }
-        defer { url.stopAccessingSecurityScopedResource() }
+        defer { if hasScopedAccess { url.stopAccessingSecurityScopedResource() } }
         return try body()
     }
 

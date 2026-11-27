@@ -56,6 +56,20 @@ final class LibraryModel: ObservableObject {
         }
     }
 
+    func prepareReviewDemoLibrary() async {
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("Review Demo", isDirectory: true)
+            try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+            libraryURL = url
+            notebooks = try repository.listNotebooks(in: url)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func chooseLibrary(_ url: URL) async {
         isLoading = true
         defer { isLoading = false }

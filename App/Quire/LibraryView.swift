@@ -45,7 +45,7 @@ struct LibraryView: View {
                         ContentUnavailableView {
                             Label("Your notebooks are files", systemImage: "folder.badge.plus")
                         } description: {
-                            Text("Choose a folder in iCloud Drive or On My iPad. Every notebook keeps a readable PDF beside its editable pages.")
+                            Text("Choose a folder in iCloud Drive or on this device. Every notebook keeps a readable PDF beside its editable pages.")
                         } actions: {
                             Button("Choose a Folder") { isChoosingFolder = true }
                                 .buttonStyle(.borderedProminent)

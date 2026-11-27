@@ -12,7 +12,11 @@ struct QuireApp: App {
                 .environmentObject(purchases)
                 .task {
                     await purchases.load()
-                    await library.restoreLibrary()
+                    if ProcessInfo.processInfo.arguments.contains("-QuireReviewDemo") {
+                        await library.prepareReviewDemoLibrary()
+                    } else {
+                        await library.restoreLibrary()
+                    }
                 }
         }
     }

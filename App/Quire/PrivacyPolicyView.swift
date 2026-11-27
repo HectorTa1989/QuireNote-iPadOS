@@ -11,7 +11,7 @@ struct PrivacyPolicyView: View {
                 Text("StoreKit transactions are processed by Apple. QuireNote receives only the entitlement needed to unlock Pro on this device.")
             }
             Section("Support and the full policy") {
-                Link("Read the published privacy policy", destination: URL(string: "https://github.com/HectorTa1989/Quire-iPadOS/blob/master/PRIVACY.md")!)
+                Link("Read the published privacy policy", destination: URL(string: "https://github.com/HectorTa1989/QuireNote-iPadOS/blob/master/PRIVACY.md")!)
                 Text("Changes to this policy will be published at the link above before they take effect.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
