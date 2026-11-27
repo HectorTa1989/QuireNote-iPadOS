@@ -100,6 +100,7 @@ def main():
             print(f"{build['platform']} {build['version']} build {build['number']}: "
                   f"{build['state']}; id={build['id']}")
         return
+    entries = list(versions(token))
     if args.command == "select-build":
         if not args.platform or not args.build_number:
             parser.error("select-build requires --platform and --build-number")
@@ -121,7 +122,6 @@ def main():
             raise RuntimeError("Selected build did not match after update")
         print(f"Selected {args.platform} build {args.build_number} for App Store version {target['version']}")
         return
-    entries = list(versions(token))
     if args.command == "status":
         for entry in entries:
             detail_id = entry["review_detail_id"]
