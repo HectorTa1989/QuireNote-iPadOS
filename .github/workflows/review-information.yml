@@ -8,7 +8,7 @@ on:
         required: true
         default: status
         type: choice
-        options: [status, list-builds, list-submissions, list-iap, write-notes, select-build]
+        options: [status, list-builds, list-submissions, list-iap, configure-iap, write-notes, select-build]
       platform:
         description: Platform for write-notes
         required: false
