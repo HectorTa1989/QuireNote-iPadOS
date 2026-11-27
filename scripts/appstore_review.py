@@ -73,12 +73,11 @@ def versions(token):
 
 
 def builds(token):
-    query = urllib.parse.urlencode({"limit": "200", "include": "preReleaseVersion", "sort": "-uploadedDate"})
+    query = urllib.parse.urlencode({"limit": "200"})
     response = api_request(token, "GET", f"/apps/{APP_ID}/builds?{query}")
-    included = {(item["type"], item["id"]): item for item in response.get("included", [])}
-    for build in response["data"]:
-        prerelease_data = build.get("relationships", {}).get("preReleaseVersion", {}).get("data")
-        prerelease = included.get(("preReleaseVersions", prerelease_data["id"])) if prerelease_data else None
+    recent = sorted(response["data"], key=lambda item: item["attributes"].get("uploadedDate") or "", reverse=True)[:12]
+    for build in recent:
+        prerelease = api_request(token, "GET", f"/builds/{build['id']}/preReleaseVersion").get("data")
         yield {
             "id": build["id"],
             "number": build["attributes"].get("version"),
