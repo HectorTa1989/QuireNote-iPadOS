@@ -16,11 +16,9 @@ final class QuireUITests: XCTestCase {
         app.launchArguments = ["-ApplePersistenceIgnoreState", "YES", "-QuireReviewDemo"]
         app.launch()
 
-        XCTAssertTrue(app.buttons["Add"].waitForExistence(timeout: 20), app.debugDescription)
+        XCTAssertTrue(app.buttons["New Notebook"].waitForExistence(timeout: 20), app.debugDescription)
         capture("01-library", in: app)
 
-        app.buttons["Add"].tap()
-        XCTAssertTrue(app.buttons["New Notebook"].waitForExistence(timeout: 5), app.debugDescription)
         app.buttons["New Notebook"].tap()
         XCTAssertTrue(app.textFields["Title"].waitForExistence(timeout: 5), app.debugDescription)
         let title = "Review Notebook \(UUID().uuidString.prefix(4))"

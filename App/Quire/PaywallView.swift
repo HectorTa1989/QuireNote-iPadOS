@@ -24,7 +24,7 @@ struct PaywallView: View {
                 } label: {
                     HStack {
                         if purchases.isPurchasing { ProgressView().tint(.white) }
-                        Text("Unlock Pro — \(purchases.proProduct?.displayPrice ?? "$19.99")")
+                        Text(purchases.proProduct.map { "Unlock Pro — \($0.displayPrice)" } ?? "Unlock Pro")
                     }
                     .frame(maxWidth: .infinity)
                 }

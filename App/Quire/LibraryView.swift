@@ -51,11 +51,19 @@ struct LibraryView: View {
                                 .buttonStyle(.borderedProminent)
                         }
                     } else if library.filteredNotebooks.isEmpty {
-                        ContentUnavailableView(
-                            library.searchText.isEmpty ? "No Notebooks" : "No Results",
-                            systemImage: library.searchText.isEmpty ? "book.closed" : "magnifyingglass",
-                            description: Text(library.searchText.isEmpty ? "Create your first file-owned notebook." : "Try a different search.")
-                        )
+                        ContentUnavailableView {
+                            Label(library.searchText.isEmpty ? "No Notebooks" : "No Results",
+                                  systemImage: library.searchText.isEmpty ? "book.closed" : "magnifyingglass")
+                        } description: {
+                            Text(library.searchText.isEmpty ? "Create your first file-owned notebook." : "Try a different search.")
+                        } actions: {
+                            if library.searchText.isEmpty {
+                                Button("New Notebook") {
+                                    performProGated { isCreatingNotebook = true }
+                                }
+                                .buttonStyle(.borderedProminent)
+                            }
+                        }
                     } else {
                         ScrollView {
                             LazyVGrid(columns: columns, spacing: 24) {

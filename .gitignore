@@ -9,3 +9,4 @@ xcuserdata/
 *.ipa
 ExportOptions.plist
 .signing/
+artifacts/review-demo-run-*/

@@ -3,7 +3,7 @@
 **Effective date: 2026-11-10**
 
 QuireNote is designed so your notebooks remain files you control. This policy applies
-to the QuireNote iPad app.
+to the QuireNote iPhone, iPad, and Mac app.
 
 ## Data QuireNote does not collect
 
@@ -15,7 +15,7 @@ accounts and operates no QuireNote cloud service.
 ## Where your notes live
 
 You choose the folder where QuireNote stores notebook packages. That folder may be on
-your iPad or in a third-party file provider such as iCloud Drive. The provider you
+your device or in a third-party file provider such as iCloud Drive. The provider you
 choose governs any syncing, backup, retention, or sharing of that folder under its
 own privacy terms. QuireNote accesses the folder only after you select it in the
 system file picker.
@@ -29,4 +29,4 @@ only to determine whether Pro is unlocked; it does not receive payment-card data
 ## Changes and contact
 
 Material changes will be published in this file before taking effect. For privacy
-questions, open an issue at <https://github.com/HectorTa1989/Quire-iPadOS/issues>.
+questions, open an issue at <https://github.com/HectorTa1989/QuireNote-iPadOS/issues>.
