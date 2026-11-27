@@ -1,0 +1,102 @@
+name: Upload genuine App Store screenshots
+
+on:
+  workflow_dispatch:
+    inputs:
+      iphone_run_id:
+        description: Successful iPhone Pro Max demo workflow run ID
+        required: true
+        type: string
+      ipad_run_id:
+        description: Successful 13-inch iPad demo workflow run ID
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  upload:
+    runs-on: xcode-27
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download iPhone captures
+        uses: actions/download-artifact@v4
+        with:
+          name: QuireNote-review-demo-iphone
+          run-id: ${{ inputs.iphone_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: iphone
+      - name: Download iPad captures
+        uses: actions/download-artifact@v4
+        with:
+          name: QuireNote-review-demo-ipad
+          run-id: ${{ inputs.ipad_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ipad
+      - name: Select genuine running-app screenshots
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import shutil
+          from pathlib import Path
+
+          output = Path(os.environ['RUNNER_TEMP']) / 'review-screenshots' / 'en-US'
+          output.mkdir(parents=True, exist_ok=True)
+          for device, required_name, store_name in [
+              ('iphone', 'Pro Max', 'iPhone 16 Pro Max'),
+              ('ipad', '13-inch', 'iPad Pro (13-inch) (M4)'),
+          ]:
+              directory = Path(device) / 'review-demo-attachments'
+              entries = json.loads((directory / 'manifest.json').read_text())
+              for index, screenshot_name in enumerate(['04-editor', '03-library-with-notebook'], 1):
+                  matches = [entry for entry in entries
+                             if entry.get('suggestedHumanReadableName', '').startswith(screenshot_name + '_')
+                             and entry.get('exportedFileName', '').endswith('.png')]
+                  if len(matches) != 1:
+                      raise SystemExit(f'Expected one {device} {screenshot_name} screenshot; found {len(matches)}')
+                  entry = matches[0]
+                  if required_name not in entry.get('deviceName', ''):
+                      raise SystemExit(f'Unexpected device: {entry.get("deviceName")}')
+                  source = directory / entry['exportedFileName']
+                  destination = output / f'{store_name}-{index:02}.png'
+                  shutil.copyfile(source, destination)
+                  print(f'Selected {entry["deviceName"]}: {destination.name}')
+          PY
+      - name: Upload screenshots to rejected iOS version
+        env:
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          path = os.path.join(os.environ['RUNNER_TEMP'], 'appstore_api_key.json')
+          with open(path, 'w') as output:
+              json.dump({
+                  'key_id': os.environ['APPSTORE_KEY_ID'],
+                  'issuer_id': os.environ['APPSTORE_ISSUER_ID'],
+                  'key': os.environ['APPSTORE_PRIVATE_KEY'],
+                  'in_house': False,
+              }, output)
+          PY
+          fastlane deliver \
+            --api_key_path "$RUNNER_TEMP/appstore_api_key.json" \
+            --app_identifier com.quirenote.app \
+            --screenshots_path "$RUNNER_TEMP/review-screenshots" \
+            --skip_binary_upload true \
+            --skip_metadata true \
+            --skip_app_version_update true \
+            --run_precheck_before_submit false \
+            --force true
+      - name: Preserve genuine screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: QuireNote-genuine-App-Store-screenshots
+          path: ${{ runner.temp }}/review-screenshots/
+          if-no-files-found: error
