@@ -163,6 +163,59 @@ def configure_iap(token):
     print(f"QuireNote Pro: id={product_id}; version={version['id']}; state={version['attributes']['state']}")
 
 
+def attach_iap_screenshot(token, file):
+    if not file.is_file() or file.suffix.lower() != ".png" or file.stat().st_size == 0:
+        raise RuntimeError("Expected a nonempty PNG captured from the running app")
+    products = api_request(token, "GET", f"/apps/{APP_ID}/inAppPurchasesV2?limit=200")["data"]
+    matches = [item for item in products if item["attributes"]["productId"] == "quire.pro"]
+    if len(matches) != 1:
+        raise RuntimeError("Expected exactly one QuireNote Pro purchase")
+    product_id = matches[0]["id"]
+    try:
+        existing = api_request(token, "GET", f"/v2/inAppPurchases/{product_id}/appStoreReviewScreenshot")["data"]
+    except RuntimeError as error:
+        if "HTTP 404" not in str(error):
+            raise
+        existing = None
+    if existing and existing["attributes"].get("assetDeliveryState", {}).get("state") == "COMPLETE":
+        print("Pro review screenshot already uploaded")
+        return
+    body = {"data": {"type": "inAppPurchaseAppStoreReviewScreenshots", "attributes": {
+        "fileName": file.name, "fileSize": file.stat().st_size},
+        "relationships": {"inAppPurchaseV2": {"data": {"type": "inAppPurchases", "id": product_id}}}}}
+    reservation = api_request(token, "POST", "/inAppPurchaseAppStoreReviewScreenshots", body)["data"]
+    screenshot_id = reservation["id"]
+    operations = reservation["attributes"]["uploadOperations"]
+    if not operations:
+        raise RuntimeError("Apple returned no screenshot upload operations")
+    checksum = hashlib.md5()
+    with file.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(8 * 1024 * 1024), b""):
+            checksum.update(chunk)
+    with file.open("rb") as stream:
+        for operation in operations:
+            stream.seek(operation["offset"])
+            chunk = stream.read(operation["length"])
+            headers = {header["name"]: header["value"] for header in operation["requestHeaders"]}
+            request = urllib.request.Request(operation["url"], data=chunk,
+                                             method=operation["method"], headers=headers)
+            with urllib.request.urlopen(request, timeout=180):
+                pass
+    body = {"data": {"type": "inAppPurchaseAppStoreReviewScreenshots", "id": screenshot_id,
+                     "attributes": {"uploaded": True, "sourceFileChecksum": checksum.hexdigest()}}}
+    api_request(token, "PATCH", f"/inAppPurchaseAppStoreReviewScreenshots/{screenshot_id}", body)
+    for _ in range(30):
+        result = api_request(token, "GET", f"/inAppPurchaseAppStoreReviewScreenshots/{screenshot_id}")
+        state = result["data"]["attributes"].get("assetDeliveryState", {}).get("state")
+        if state == "COMPLETE":
+            print(f"Uploaded Pro review screenshot: {file.name}")
+            return
+        if state == "FAILED":
+            raise RuntimeError("Pro screenshot processing failed")
+        time.sleep(10)
+    raise RuntimeError("Pro screenshot processing timed out")
+
+
 def attach_demo(token, platform, file):
     entries = [entry for entry in versions(token) if entry["platform"] == platform]
     if len(entries) != 1 or not entries[0]["review_detail_id"]:
@@ -219,7 +272,7 @@ def attach_demo(token, platform, file):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["status", "write-notes", "list-builds", "select-build", "attach-demo", "list-submissions", "list-iap", "configure-iap"])
+    parser.add_argument("command", choices=["status", "write-notes", "list-builds", "select-build", "attach-demo", "list-submissions", "list-iap", "configure-iap", "attach-iap-screenshot"])
     parser.add_argument("--platform", choices=["IOS", "MAC_OS"])
     parser.add_argument("--notes-file", type=Path)
     parser.add_argument("--build-number")
@@ -228,6 +281,11 @@ def main():
     token = token_from_environment()
     if args.command == "configure-iap":
         configure_iap(token)
+        return
+    if args.command == "attach-iap-screenshot":
+        if not args.file:
+            parser.error("attach-iap-screenshot requires --file")
+        attach_iap_screenshot(token, args.file)
         return
     if args.command == "list-builds":
         for build in list(builds(token))[:12]:

@@ -1,0 +1,52 @@
+name: Upload Pro purchase review screenshot
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful iPhone review demo run ID
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check PyJWT cryptography
+      - uses: actions/download-artifact@v4
+        with:
+          name: QuireNote-review-demo-iphone
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: demo
+      - name: Select actual paywall screenshot
+        run: |
+          python - <<'PY'
+          import json
+          import shutil
+          from pathlib import Path
+
+          directory = Path('demo/review-demo-attachments')
+          entries = json.loads((directory / 'manifest.json').read_text())
+          matches = [entry for entry in entries
+                     if entry.get('suggestedHumanReadableName', '').startswith('07-pro_')
+                     and entry.get('exportedFileName', '').endswith('.png')]
+          if len(matches) != 1:
+              raise SystemExit(f'Expected one running-app Pro screenshot; found {len(matches)}')
+          shutil.copyfile(directory / matches[0]['exportedFileName'], 'QuireNote-Pro-Review.png')
+          PY
+      - name: Upload to App Store Connect
+        env:
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: python scripts/appstore_review.py attach-iap-screenshot --file QuireNote-Pro-Review.png
