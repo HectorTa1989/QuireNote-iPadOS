@@ -30,7 +30,7 @@ def api_request(token, method, path, data=None):
     )
     try:
         with urllib.request.urlopen(request, timeout=60) as response:
-            return json.load(response)
+            return {} if response.status == 204 else json.load(response)
     except urllib.error.HTTPError as error:
         details = error.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"App Store Connect {method} {path}: HTTP {error.code}: {details}") from error
@@ -89,15 +89,37 @@ def builds(token):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["status", "write-notes", "list-builds"])
+    parser.add_argument("command", choices=["status", "write-notes", "list-builds", "select-build"])
     parser.add_argument("--platform", choices=["IOS", "MAC_OS"])
     parser.add_argument("--notes-file", type=Path)
+    parser.add_argument("--build-number")
     args = parser.parse_args()
     token = token_from_environment()
     if args.command == "list-builds":
         for build in list(builds(token))[:12]:
             print(f"{build['platform']} {build['version']} build {build['number']}: "
                   f"{build['state']}; id={build['id']}")
+        return
+    if args.command == "select-build":
+        if not args.platform or not args.build_number:
+            parser.error("select-build requires --platform and --build-number")
+        candidates = [entry for entry in entries if entry["platform"] == args.platform]
+        if len(candidates) != 1:
+            raise RuntimeError(f"Expected exactly one {args.platform} App Store version")
+        target = candidates[0]
+        if target["state"] not in {"REJECTED", "PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW"}:
+            raise RuntimeError(f"Refusing to change a build while {args.platform} is {target['state']}")
+        matching = [build for build in builds(token) if build["platform"] == args.platform
+                    and build["version"] == "1.0.0" and build["number"] == args.build_number
+                    and build["state"] == "VALID"]
+        if len(matching) != 1:
+            raise RuntimeError(f"Expected exactly one valid {args.platform} build {args.build_number}")
+        body = {"data": {"type": "builds", "id": matching[0]["id"]}}
+        api_request(token, "PATCH", f"/appStoreVersions/{target['version_id']}/relationships/build", body)
+        verify = api_request(token, "GET", f"/appStoreVersions/{target['version_id']}/relationships/build")
+        if verify.get("data", {}).get("id") != matching[0]["id"]:
+            raise RuntimeError("Selected build did not match after update")
+        print(f"Selected {args.platform} build {args.build_number} for App Store version {target['version']}")
         return
     entries = list(versions(token))
     if args.command == "status":

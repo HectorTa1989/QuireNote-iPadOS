@@ -8,13 +8,18 @@ on:
         required: true
         default: status
         type: choice
-        options: [status, list-builds, write-notes]
+        options: [status, list-builds, write-notes, select-build]
       platform:
         description: Platform for write-notes
         required: false
         default: IOS
         type: choice
         options: [IOS, MAC_OS]
+      build_number:
+        description: Build number for select-build
+        required: false
+        default: '5'
+        type: string
 
 permissions:
   contents: read
@@ -38,4 +43,5 @@ jobs:
           python scripts/appstore_review.py
           '${{ inputs.command }}'
           --platform '${{ inputs.platform }}'
+          --build-number '${{ inputs.build_number }}'
           --notes-file APP_REVIEW_NOTES.md
