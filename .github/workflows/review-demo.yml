@@ -43,7 +43,11 @@ jobs:
                      if d["isAvailable"] and d["name"].startswith("iPhone" if kind == "iphone" else "iPad")]
           if not matches:
               raise SystemExit("No available " + kind + " simulator")
-          print(sorted(matches, key=lambda item: item[0], reverse=True)[0][1]["udid"])
+          preferred = [(runtime, d) for runtime, d in matches
+                       if ("Pro Max" in d["name"] if kind == "iphone" else "13-inch" in d["name"])]
+          selected = sorted(preferred or matches, key=lambda item: item[0], reverse=True)[0][1]
+          print("Selected " + selected["name"], file=sys.stderr)
+          print(selected["udid"])
           ' '${{ matrix.device }}')
           xcrun simctl boot "$UDID"
           xcrun simctl bootstatus "$UDID" -b
